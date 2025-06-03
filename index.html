@@ -2,20 +2,32 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Mis Asignaciones - Horarios</title>
+  <title>Asignaciones BK</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      margin: 20px;
       background: #f9f9f9;
+      margin: 20px;
     }
     h1 {
       color: #2a5d84;
     }
+    button {
+      margin: 10px;
+      padding: 10px 20px;
+      background: #2a5d84;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #1a3e5a;
+    }
     table {
       border-collapse: collapse;
       width: 100%;
-      max-width: 700px;
+      max-width: 800px;
       margin-top: 20px;
       background: white;
       box-shadow: 0 0 10px #ccc;
@@ -32,85 +44,119 @@
   </style>
 </head>
 <body>
-  <h1>Mis Asignaciones</h1>
-  <table id="tablaHorarios">
-    <thead>
-      <tr>
-        <th>Fecha</th>
-        <th>Hora Entrada</th>
-        <th>Hora Salida</th>
-        <th>Tienda</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr><td colspan="4">Cargando...</td></tr>
-    </tbody>
-  </table>
+  <h1>Asignaciones BK</h1>
+  <button onclick="verMisHorarios()">Ver mis horarios</button>
+  <button onclick="verTodos()">Ver horarios de todos</button>
+
+  <div id="resultado"></div>
 
   <script>
-    // ✔️ Tu hoja de cálculo en formato CSV público
     const sheetUrl = "https://docs.google.com/spreadsheets/d/1nDrIAbG-VDmzHfIwiL_GA_nHoMx0w_G3HInpmMkV35A/export?format=csv&gid=0";
-
-    // Proxy para evitar CORS
     const proxy = "https://api.allorigins.win/raw?url=";
 
-    // Leer CSV y convertir a diccionario { legajo: nombre }
+    // ✔️ Lee la hoja de cálculo y devuelve un objeto con legajo => nombre
     async function cargarNombres() {
-      const respuesta = await fetch(sheetUrl);
-      const texto = await respuesta.text();
+      const res = await fetch(sheetUrl);
+      const texto = await res.text();
       const filas = texto.trim().split('\n');
       const nombres = {};
-      filas.forEach((fila, i) => {
-        if (i === 0) return; // saltar encabezado
+      filas.slice(1).forEach(fila => {
         const [legajo, nombre] = fila.split(',');
         nombres[legajo.trim()] = nombre.trim();
       });
       return nombres;
     }
 
-    async function cargarHorariosConNombres() {
+    // ✔️ Muestra solo tus horarios (como ya venía haciendo)
+    async function verMisHorarios() {
+      const nombres = await cargarNombres();
+      const legajo = prompt("Ingresá tu legajo:");
+      if (!legajo) return;
+
+      const nombre = nombres[legajo] || "Desconocido";
+      const apiUrl = `http://proveedores.alsea.com.ar:48080/asignaciones-server/mobile/main/asignaciones/legajos/${legajo}`;
+      const url = `${proxy}${encodeURIComponent(apiUrl)}`;
+
       try {
-        const nombres = await cargarNombres();
+        const res = await fetch(url);
+        const data = await res.json();
 
-        let legajo = prompt("Ingresá tu legajo:");
-        if (!legajo) throw new Error("No se ingresó legajo.");
+        const tabla = `
+          <h2>Asignaciones de ${nombre}</h2>
+          <table>
+            <thead><tr><th>Fecha</th><th>Entrada</th><th>Salida</th><th>Tienda</th></tr></thead>
+            <tbody>
+              ${data.asignaciones.map(a => `
+                <tr>
+                  <td>${a.fecha}</td>
+                  <td>${a.horaEntrada}</td>
+                  <td>${a.horaSalida}</td>
+                  <td>${a.tienda}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>`;
+        document.getElementById("resultado").innerHTML = tabla;
 
-        const nombreUsuario = nombres[legajo] || "Desconocido";
-
-        const apiUrl = `http://proveedores.alsea.com.ar:48080/asignaciones-server/mobile/main/asignaciones/legajos/${legajo}`;
-        const url = `${proxy}${encodeURIComponent(apiUrl)}`;
-
-        const respuesta = await fetch(url);
-        const datos = await respuesta.json();
-
-        document.querySelector("h1").textContent = `Asignaciones de ${nombreUsuario}`;
-
-        const tablaBody = document.querySelector("#tablaHorarios tbody");
-        tablaBody.innerHTML = "";
-
-        if (!datos.asignaciones || datos.asignaciones.length === 0) {
-          tablaBody.innerHTML = `<tr><td colspan="4">No hay asignaciones disponibles.</td></tr>`;
-          return;
-        }
-
-        datos.asignaciones.forEach(asignacion => {
-          const fila = document.createElement("tr");
-          fila.innerHTML = `
-            <td>${asignacion.fecha}</td>
-            <td>${asignacion.horaEntrada}</td>
-            <td>${asignacion.horaSalida}</td>
-            <td>${asignacion.tienda}</td>
-          `;
-          tablaBody.appendChild(fila);
-        });
-
-      } catch (error) {
-        const tablaBody = document.querySelector("#tablaHorarios tbody");
-        tablaBody.innerHTML = `<tr><td colspan="4" style="color:red;">No se pudieron cargar los datos.<br>${error.message}</td></tr>`;
+      } catch (e) {
+        document.getElementById("resultado").innerHTML = `<p style="color:red;">Error al cargar tus asignaciones.</p>`;
       }
     }
 
-    cargarHorariosConNombres();
+    // ✔️ Carga todos los horarios por cada persona y los agrupa por día
+    async function verTodos() {
+      const nombres = await cargarNombres();
+      const horariosPorDia = {};
+
+      const resultadoDiv = document.getElementById("resultado");
+      resultadoDiv.innerHTML = `<p>Cargando todos los horarios...</p>`;
+
+      for (const legajo in nombres) {
+        const apiUrl = `http://proveedores.alsea.com.ar:48080/asignaciones-server/mobile/main/asignaciones/legajos/${legajo}`;
+        const url = `${proxy}${encodeURIComponent(apiUrl)}`;
+
+        try {
+          const res = await fetch(url);
+          const data = await res.json();
+          const nombre = nombres[legajo];
+
+          data.asignaciones.forEach(asig => {
+            const dia = asig.fecha;
+            if (!horariosPorDia[dia]) horariosPorDia[dia] = [];
+            horariosPorDia[dia].push({
+              nombre,
+              entrada: asig.horaEntrada,
+              salida: asig.horaSalida,
+              tienda: asig.tienda
+            });
+          });
+
+        } catch (e) {
+          console.warn(`Error al cargar asignaciones de ${nombres[legajo]}`);
+        }
+      }
+
+      // ✔️ Armar el HTML de la tabla por día
+      let html = `<h2>Horarios por día</h2>`;
+      for (const dia in horariosPorDia) {
+        html += `
+          <h3>${dia}</h3>
+          <table>
+            <thead><tr><th>Nombre</th><th>Entrada</th><th>Salida</th><th>Tienda</th></tr></thead>
+            <tbody>
+              ${horariosPorDia[dia].map(h => `
+                <tr>
+                  <td>${h.nombre}</td>
+                  <td>${h.entrada}</td>
+                  <td>${h.salida}</td>
+                  <td>${h.tienda}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>`;
+      }
+
+      resultadoDiv.innerHTML = html;
+    }
   </script>
 </body>
 </html>
