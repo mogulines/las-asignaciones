@@ -94,6 +94,15 @@
       return nombres;
     }
 
+    // Función auxiliar para calcular horas entre dos strings "HH:mm"
+    function calcularHoras(entrada, salida) {
+      const [h1, m1] = entrada.split(':').map(Number);
+      const [h2, m2] = salida.split(':').map(Number);
+      let horas = h2 + m2/60 - (h1 + m1/60);
+      if (horas < 0) horas += 24; // Si cruza medianoche, lo ajusta
+      return horas;
+    }
+
     async function verMisHorarios() {
       const nombres = await cargarNombres();
       const legajo = prompt("Ingresá tu legajo:");
@@ -106,6 +115,12 @@
       try {
         const res = await fetch(url);
         const data = await res.json();
+
+        // CALCULO EL TOTAL DE HORAS
+        let totalHoras = 0;
+        data.asignaciones.forEach(a => {
+          totalHoras += calcularHoras(a.horaEntrada, a.horaSalida);
+        });
 
         const tabla = `
           <div class="scaleX-in">
@@ -122,6 +137,7 @@
                   </tr>`).join('')}
               </tbody>
             </table>
+            <p><strong>Total de horas asignadas: ${totalHoras.toFixed(2)} hs</strong></p>
           </div>`;
         document.getElementById("resultado").innerHTML = tabla;
 
@@ -186,3 +202,4 @@
   </script>
 </body>
 </html>
+
