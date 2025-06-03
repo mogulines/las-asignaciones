@@ -15,14 +15,14 @@
     table {
       border-collapse: collapse;
       width: 100%;
-      max-width: 600px;
+      max-width: 700px;
       margin-top: 20px;
       background: white;
       box-shadow: 0 0 10px #ccc;
     }
     th, td {
       border: 1px solid #ddd;
-      padding: 8px;
+      padding: 10px;
       text-align: center;
     }
     th {
@@ -32,7 +32,7 @@
   </style>
 </head>
 <body>
-  <h1>Mis Asignaciones - Horarios</h1>
+  <h1>Mis Asignaciones</h1>
   <table id="tablaHorarios">
     <thead>
       <tr>
@@ -48,27 +48,50 @@
   </table>
 
   <script>
-    const legajo = "131018";
+    // ✔️ Tu hoja de cálculo en formato CSV público
+    const sheetUrl = "https://docs.google.com/spreadsheets/d/1nDrIAbG-VDmzHfIwiL_GA_nHoMx0w_G3HInpmMkV35A/export?format=csv&gid=0";
 
-    // Proxy para evitar CORS (allorigins)
+    // Proxy para evitar CORS
     const proxy = "https://api.allorigins.win/raw?url=";
 
-    // URL original de la API
-    const apiUrl = `http://proveedores.alsea.com.ar:48080/asignaciones-server/mobile/main/asignaciones/legajos/${legajo}`;
+    // Leer CSV y convertir a diccionario { legajo: nombre }
+    async function cargarNombres() {
+      const respuesta = await fetch(sheetUrl);
+      const texto = await respuesta.text();
+      const filas = texto.trim().split('\n');
+      const nombres = {};
+      filas.forEach((fila, i) => {
+        if (i === 0) return; // saltar encabezado
+        const [legajo, nombre] = fila.split(',');
+        nombres[legajo.trim()] = nombre.trim();
+      });
+      return nombres;
+    }
 
-    // URL completa usando proxy
-    const url = `${proxy}${encodeURIComponent(apiUrl)}`;
-
-    async function cargarHorarios() {
+    async function cargarHorariosConNombres() {
       try {
+        const nombres = await cargarNombres();
+
+        let legajo = prompt("Ingresá tu legajo:");
+        if (!legajo) throw new Error("No se ingresó legajo.");
+
+        const nombreUsuario = nombres[legajo] || "Desconocido";
+
+        const apiUrl = `http://proveedores.alsea.com.ar:48080/asignaciones-server/mobile/main/asignaciones/legajos/${legajo}`;
+        const url = `${proxy}${encodeURIComponent(apiUrl)}`;
+
         const respuesta = await fetch(url);
-        if (!respuesta.ok) {
-          throw new Error(`Error HTTP: ${respuesta.status}`);
-        }
         const datos = await respuesta.json();
+
+        document.querySelector("h1").textContent = `Asignaciones de ${nombreUsuario}`;
 
         const tablaBody = document.querySelector("#tablaHorarios tbody");
         tablaBody.innerHTML = "";
+
+        if (!datos.asignaciones || datos.asignaciones.length === 0) {
+          tablaBody.innerHTML = `<tr><td colspan="4">No hay asignaciones disponibles.</td></tr>`;
+          return;
+        }
 
         datos.asignaciones.forEach(asignacion => {
           const fila = document.createElement("tr");
@@ -87,7 +110,7 @@
       }
     }
 
-    cargarHorarios();
+    cargarHorariosConNombres();
   </script>
 </body>
 </html>
