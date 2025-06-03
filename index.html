@@ -1,220 +1,180 @@
-
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Asignaciones BK</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet" />
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #b0acd4; /* Fondo general */
-      margin: 20px;
-      color: #46245c; /* Color texto general */
+      margin: 0;
+      padding: 2rem;
+      background-color: #b0acd4;
+      font-family: 'Inter', sans-serif;
+      color: #6755a2;
+      text-align: center;
     }
     h1 {
-      color: #6755a2; /* Color principal */
-      text-align: center;
-    }
-    button {
-      margin: 10px;
-      padding: 10px 20px;
-      background: #6755a2; /* Color principal */
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-weight: bold;
-      box-shadow: 0 2px 5px rgba(70, 36, 92, 0.5);
-      transition: background-color 0.3s ease;
-    }
-    button:hover {
-      background: #46245c; /* Color detalles */
-    }
-    table {
-      border-collapse: collapse;
-      width: 100%;
-      max-width: 800px;
-      margin-top: 20px;
-      background: white;
-      box-shadow: 0 0 10px rgba(70, 36, 92, 0.3);
       color: #46245c;
     }
+    input, button, select {
+      padding: 0.5rem;
+      margin: 0.5rem;
+      border-radius: 0.5rem;
+      border: none;
+      font-size: 1rem;
+    }
+    button {
+      background-color: #6755a2;
+      color: white;
+      cursor: pointer;
+    }
+    table {
+      margin: 1rem auto;
+      border-collapse: collapse;
+      width: 80%;
+      background-color: white;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
     th, td {
-      border: 1px solid #46245c; /* Color detalles */
-      padding: 10px;
-      text-align: center;
+      padding: 0.75rem;
+      border: 1px solid #ddd;
     }
     th {
-      background-color: #6755a2; /* Color principal */
+      background-color: #6755a2;
       color: white;
     }
-    .scaleX-in {
-      animation: scaleXIn 0.5s ease forwards;
-      transform-origin: left center;
-      transform: scaleX(0);
+    #output {
+      margin-top: 2rem;
+    }
+    .fade-in {
+      animation: fadeIn 0.5s ease-out forwards;
       opacity: 0;
     }
-    @keyframes scaleXIn {
+    @keyframes fadeIn {
       to {
-        transform: scaleX(1);
         opacity: 1;
       }
-    }
-    #resultado > div {
-      max-width: 800px;
-      margin: 20px auto;
     }
   </style>
 </head>
 <body>
   <h1>Asignaciones BK</h1>
-  <div style="text-align: center;">
-    <button onclick="verMisHorarios()">Ver mis horarios</button>
-    <button onclick="verTodos()">Ver horarios de todos</button>
+
+  <div>
+    <button onclick="modo = 'personal'; mostrarFormulario()">Ver mis horarios</button>
+    <button onclick="modo = 'todos'; mostrarTodos()">Ver todos por día</button>
   </div>
 
-  <div id="resultado"></div>
+  <div id="formularioLegajo" style="margin-top: 1rem; display: none;">
+    <input type="text" id="legajo" placeholder="Ingresá tu legajo" />
+    <button onclick="cargarHorarios()">Ver horarios</button>
+  </div>
+
+  <div id="output"></div>
 
   <script>
-    const sheetUrl = "https://docs.google.com/spreadsheets/d/1nDrIAbG-VDmzHfIwiL_GA_nHoMx0w_G3HInpmMkV35A/export?format=csv&gid=0";
-    const proxy = "https://api.allorigins.win/raw?url=";
+    let modo = "personal";
+    const sheetID = "1nDrIAbG-VDmzHfIwiL_GA_nHoMx0w_G3HInpmMkV35A";
+    const asignacionesUrl = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json&sheet=Asignaciones`;
+    const historialUrl = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json&sheet=HistorialHoras`;
 
-    async function cargarNombres() {
-      const res = await fetch(sheetUrl);
-      const texto = await res.text();
-      const filas = texto.trim().split('\n');
-      const nombres = {};
-      filas.slice(1).forEach(fila => {
-        const [legajo, nombre] = fila.split(',');
-        nombres[legajo.trim()] = nombre.trim();
-      });
-      return nombres;
+    function mostrarFormulario() {
+      document.getElementById("formularioLegajo").style.display = "block";
+      document.getElementById("output").innerHTML = "";
     }
 
-    function calcularHoras(entrada, salida) {
-      const [h1, m1] = entrada.split(':').map(Number);
-      const [h2, m2] = salida.split(':').map(Number);
-      let horas = h2 + m2/60 - (h1 + m1/60);
-      if (horas < 0) horas += 24;
-      return horas;
-    }
-
-    // FUNCION NUEVA: carga total acumulado guardado en localStorage (o 0 si no existe)
-    function cargarHorasAcumuladas(legajo) {
-      const val = localStorage.getItem(`horas_acumuladas_${legajo}`);
-      return val ? parseFloat(val) : 0;
-    }
-
-    // FUNCION NUEVA: guarda total acumulado en localStorage
-    function guardarHorasAcumuladas(legajo, total) {
-      localStorage.setItem(`horas_acumuladas_${legajo}`, total.toFixed(2));
-    }
-
-    async function verMisHorarios() {
-      const nombres = await cargarNombres();
-      const legajo = prompt("Ingresá tu legajo:");
-      if (!legajo) return;
-
-      const nombre = nombres[legajo] || "Desconocido";
-      const apiUrl = `http://proveedores.alsea.com.ar:48080/asignaciones-server/mobile/main/asignaciones/legajos/${legajo}`;
-      const url = `${proxy}${encodeURIComponent(apiUrl)}`;
-
+    async function cargarHorarios() {
+      const legajo = document.getElementById("legajo").value.trim();
+      if (!legajo) return alert("Ingresá un legajo.");
+      const url = `http://proveedores.alsea.com.ar:48080/asignaciones-server/mobile/main/asignaciones/legajos/${legajo}`;
       try {
         const res = await fetch(url);
-        const data = await res.json();
+        const datos = await res.json();
+        mostrarTabla(datos.asignaciones, `Horarios para legajo ${legajo}`);
 
-        let totalHoras = 0;
-        data.asignaciones.forEach(a => {
-          totalHoras += calcularHoras(a.horaEntrada, a.horaSalida);
-        });
+        const nuevasHoras = calcularHoras(datos.asignaciones);
+        const historial = await fetch(historialUrl);
+        const texto = await historial.text();
+        const json = JSON.parse(texto.substring(47).slice(0, -2));
+        const filas = json.table.rows;
 
-        // CARGAMOS HORAS ACUMULADAS PREVIAS
-        let acumulado = cargarHorasAcumuladas(legajo);
+        const registro = filas.find(f => f.c[0]?.v == legajo);
+        let horasPrevias = 0;
+        if (registro) horasPrevias = parseFloat(registro.c[2]?.v) || 0;
 
-        // SUMAMOS LAS HORAS NUEVAS
-        acumulado += totalHoras;
+        const total = horasPrevias + nuevasHoras;
 
-        // GUARDAMOS EL NUEVO ACUMULADO
-        guardarHorasAcumuladas(legajo, acumulado);
-
-        const tabla = `
-          <div class="scaleX-in">
-            <h2>Asignaciones de ${nombre}</h2>
-            <table>
-              <thead><tr><th>Fecha</th><th>Entrada</th><th>Salida</th><th>Tienda</th></tr></thead>
-              <tbody>
-                ${data.asignaciones.map(a => `
-                  <tr>
-                    <td>${a.fecha}</td>
-                    <td>${a.horaEntrada}</td>
-                    <td>${a.horaSalida}</td>
-                    <td>${a.tienda}</td>
-                  </tr>`).join('')}
-              </tbody>
-            </table>
-            <p><strong>Horas de esta consulta: ${totalHoras.toFixed(2)} hs</strong></p>
-            <p><strong>Total acumulado de horas: ${acumulado.toFixed(2)} hs</strong></p>
-          </div>`;
-        document.getElementById("resultado").innerHTML = tabla;
-
+        document.getElementById("output").innerHTML += `<p style="color:#46245c"><strong>Total histórico: ${total.toFixed(2)} hs</strong></p>`;
       } catch (e) {
-        document.getElementById("resultado").innerHTML = `<p style="color:red;">Error al cargar tus asignaciones.</p>`;
+        console.error(e);
+        alert("No se pudieron cargar los datos.");
       }
     }
 
-    async function verTodos() {
-      const nombres = await cargarNombres();
-      const horariosPorDia = {};
-      const resultadoDiv = document.getElementById("resultado");
-      resultadoDiv.innerHTML = `<p>Cargando todos los horarios...</p>`;
+    function calcularHoras(asignaciones) {
+      let total = 0;
+      for (const a of asignaciones) {
+        const [h1, m1] = a.horaEntrada.split(":").map(Number);
+        const [h2, m2] = a.horaSalida.split(":").map(Number);
+        const inicio = h1 + m1 / 60;
+        const fin = h2 + m2 / 60;
+        total += (fin - inicio);
+      }
+      return total;
+    }
 
-      for (const legajo in nombres) {
-        const apiUrl = `http://proveedores.alsea.com.ar:48080/asignaciones-server/mobile/main/asignaciones/legajos/${legajo}`;
-        const url = `${proxy}${encodeURIComponent(apiUrl)}`;
+    async function mostrarTodos() {
+      const res = await fetch(asignacionesUrl);
+      const texto = await res.text();
+      const json = JSON.parse(texto.substring(47).slice(0, -2));
+      const filas = json.table.rows;
+      const personas = filas.map(f => ({
+        nombre: f.c[0]?.v,
+        legajo: f.c[1]?.v
+      }));
 
+      let todas = [];
+      for (const p of personas) {
         try {
-          const res = await fetch(url);
-          const data = await res.json();
-          const nombre = nombres[legajo];
-
-          data.asignaciones.forEach(asig => {
-            const dia = asig.fecha;
-            if (!horariosPorDia[dia]) horariosPorDia[dia] = [];
-            horariosPorDia[dia].push({
-              nombre,
-              entrada: asig.horaEntrada,
-              salida: asig.horaSalida,
-              tienda: asig.tienda
+          const r = await fetch(`http://proveedores.alsea.com.ar:48080/asignaciones-server/mobile/main/asignaciones/legajos/${p.legajo}`);
+          const d = await r.json();
+          for (const a of d.asignaciones) {
+            todas.push({
+              fecha: a.fecha,
+              entrada: a.horaEntrada,
+              salida: a.horaSalida,
+              persona: p.nombre
             });
-          });
-
+          }
         } catch (e) {
-          console.warn(`Error al cargar asignaciones de ${nombres[legajo]}`);
+          console.log(`Error con ${p.nombre}`);
         }
       }
 
-      let html = `<div class="scaleX-in"><h2>Horarios por día</h2>`;
-      for (const dia in horariosPorDia) {
-        horariosPorDia[dia].sort((a, b) => a.entrada.localeCompare(b.entrada));
-        html += `
-          <h3>${dia}</h3>
-          <table>
-            <thead><tr><th>Nombre</th><th>Entrada</th><th>Salida</th><th>Tienda</th></tr></thead>
-            <tbody>
-              ${horariosPorDia[dia].map(h => `
-                <tr>
-                  <td>${h.nombre}</td>
-                  <td>${h.entrada}</td>
-                  <td>${h.salida}</td>
-                  <td>${h.tienda}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>`;
+      todas.sort((a, b) => {
+        const f1 = `${a.fecha} ${a.entrada}`;
+        const f2 = `${b.fecha} ${b.entrada}`;
+        return f1.localeCompare(f2);
+      });
+
+      let html = "<table class='fade-in'><tr><th>Nombre</th><th>Fecha</th><th>Entrada</th><th>Salida</th></tr>";
+      for (const a of todas) {
+        html += `<tr><td>${a.persona}</td><td>${a.fecha}</td><td>${a.entrada}</td><td>${a.salida}</td></tr>`;
       }
-      html += `</div>`;
-      resultadoDiv.innerHTML = html;
+      html += "</table>";
+      document.getElementById("formularioLegajo").style.display = "none";
+      document.getElementById("output").innerHTML = html;
+    }
+
+    function mostrarTabla(asignaciones, titulo) {
+      let html = `<h2 class="fade-in">${titulo}</h2><table class='fade-in'><tr><th>Fecha</th><th>Entrada</th><th>Salida</th></tr>`;
+      for (const a of asignaciones) {
+        html += `<tr><td>${a.fecha}</td><td>${a.horaEntrada}</td><td>${a.horaSalida}</td></tr>`;
+      }
+      html += "</table>";
+      document.getElementById("output").innerHTML = html;
     }
   </script>
 </body>
