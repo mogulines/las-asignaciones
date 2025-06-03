@@ -6,23 +6,28 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f9f9f9;
+      background: #b0acd4; /* Fondo general */
       margin: 20px;
+      color: #46245c; /* Color texto general */
     }
     h1 {
-      color: #2a5d84;
+      color: #6755a2; /* Color principal */
+      text-align: center;
     }
     button {
       margin: 10px;
       padding: 10px 20px;
-      background: #2a5d84;
+      background: #6755a2; /* Color principal */
       color: white;
       border: none;
       border-radius: 5px;
       cursor: pointer;
+      font-weight: bold;
+      box-shadow: 0 2px 5px rgba(70, 36, 92, 0.5);
+      transition: background-color 0.3s ease;
     }
     button:hover {
-      background: #1a3e5a;
+      background: #46245c; /* Color detalles */
     }
     table {
       border-collapse: collapse;
@@ -30,15 +35,16 @@
       max-width: 800px;
       margin-top: 20px;
       background: white;
-      box-shadow: 0 0 10px #ccc;
+      box-shadow: 0 0 10px rgba(70, 36, 92, 0.3);
+      color: #46245c;
     }
     th, td {
-      border: 1px solid #ddd;
+      border: 1px solid #46245c; /* Color detalles */
       padding: 10px;
       text-align: center;
     }
     th {
-      background-color: #2a5d84;
+      background-color: #6755a2; /* Color principal */
       color: white;
     }
 
@@ -55,12 +61,20 @@
         opacity: 1;
       }
     }
+
+    /* CENTRAR EL CONTENIDO */
+    #resultado > div {
+      max-width: 800px;
+      margin: 20px auto;
+    }
   </style>
 </head>
 <body>
   <h1>Asignaciones BK</h1>
-  <button onclick="verMisHorarios()">Ver mis horarios</button>
-  <button onclick="verTodos()">Ver horarios de todos</button>
+  <div style="text-align: center;">
+    <button onclick="verMisHorarios()">Ver mis horarios</button>
+    <button onclick="verTodos()">Ver horarios de todos</button>
+  </div>
 
   <div id="resultado"></div>
 
