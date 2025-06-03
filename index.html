@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -47,8 +49,6 @@
       background-color: #6755a2; /* Color principal */
       color: white;
     }
-
-    /* Animación con scaleX para desplegar */
     .scaleX-in {
       animation: scaleXIn 0.5s ease forwards;
       transform-origin: left center;
@@ -61,8 +61,6 @@
         opacity: 1;
       }
     }
-
-    /* CENTRAR EL CONTENIDO */
     #resultado > div {
       max-width: 800px;
       margin: 20px auto;
@@ -94,13 +92,23 @@
       return nombres;
     }
 
-    // Función auxiliar para calcular horas entre dos strings "HH:mm"
     function calcularHoras(entrada, salida) {
       const [h1, m1] = entrada.split(':').map(Number);
       const [h2, m2] = salida.split(':').map(Number);
       let horas = h2 + m2/60 - (h1 + m1/60);
-      if (horas < 0) horas += 24; // Si cruza medianoche, lo ajusta
+      if (horas < 0) horas += 24;
       return horas;
+    }
+
+    // FUNCION NUEVA: carga total acumulado guardado en localStorage (o 0 si no existe)
+    function cargarHorasAcumuladas(legajo) {
+      const val = localStorage.getItem(`horas_acumuladas_${legajo}`);
+      return val ? parseFloat(val) : 0;
+    }
+
+    // FUNCION NUEVA: guarda total acumulado en localStorage
+    function guardarHorasAcumuladas(legajo, total) {
+      localStorage.setItem(`horas_acumuladas_${legajo}`, total.toFixed(2));
     }
 
     async function verMisHorarios() {
@@ -116,11 +124,19 @@
         const res = await fetch(url);
         const data = await res.json();
 
-        // CALCULO EL TOTAL DE HORAS
         let totalHoras = 0;
         data.asignaciones.forEach(a => {
           totalHoras += calcularHoras(a.horaEntrada, a.horaSalida);
         });
+
+        // CARGAMOS HORAS ACUMULADAS PREVIAS
+        let acumulado = cargarHorasAcumuladas(legajo);
+
+        // SUMAMOS LAS HORAS NUEVAS
+        acumulado += totalHoras;
+
+        // GUARDAMOS EL NUEVO ACUMULADO
+        guardarHorasAcumuladas(legajo, acumulado);
 
         const tabla = `
           <div class="scaleX-in">
@@ -137,7 +153,8 @@
                   </tr>`).join('')}
               </tbody>
             </table>
-            <p><strong>Total de horas asignadas: ${totalHoras.toFixed(2)} hs</strong></p>
+            <p><strong>Horas de esta consulta: ${totalHoras.toFixed(2)} hs</strong></p>
+            <p><strong>Total acumulado de horas: ${acumulado.toFixed(2)} hs</strong></p>
           </div>`;
         document.getElementById("resultado").innerHTML = tabla;
 
@@ -202,4 +219,3 @@
   </script>
 </body>
 </html>
-
