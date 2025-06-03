@@ -41,6 +41,20 @@
       background-color: #2a5d84;
       color: white;
     }
+
+    /* Animación con scaleX para desplegar */
+    .scaleX-in {
+      animation: scaleXIn 0.5s ease forwards;
+      transform-origin: left center;
+      transform: scaleX(0);
+      opacity: 0;
+    }
+    @keyframes scaleXIn {
+      to {
+        transform: scaleX(1);
+        opacity: 1;
+      }
+    }
   </style>
 </head>
 <body>
@@ -54,7 +68,6 @@
     const sheetUrl = "https://docs.google.com/spreadsheets/d/1nDrIAbG-VDmzHfIwiL_GA_nHoMx0w_G3HInpmMkV35A/export?format=csv&gid=0";
     const proxy = "https://api.allorigins.win/raw?url=";
 
-    // Cargar nombres desde la hoja de cálculo
     async function cargarNombres() {
       const res = await fetch(sheetUrl);
       const texto = await res.text();
@@ -67,7 +80,6 @@
       return nombres;
     }
 
-    // Ver horarios de un solo usuario
     async function verMisHorarios() {
       const nombres = await cargarNombres();
       const legajo = prompt("Ingresá tu legajo:");
@@ -82,19 +94,21 @@
         const data = await res.json();
 
         const tabla = `
-          <h2>Asignaciones de ${nombre}</h2>
-          <table>
-            <thead><tr><th>Fecha</th><th>Entrada</th><th>Salida</th><th>Tienda</th></tr></thead>
-            <tbody>
-              ${data.asignaciones.map(a => `
-                <tr>
-                  <td>${a.fecha}</td>
-                  <td>${a.horaEntrada}</td>
-                  <td>${a.horaSalida}</td>
-                  <td>${a.tienda}</td>
-                </tr>`).join('')}
-            </tbody>
-          </table>`;
+          <div class="scaleX-in">
+            <h2>Asignaciones de ${nombre}</h2>
+            <table>
+              <thead><tr><th>Fecha</th><th>Entrada</th><th>Salida</th><th>Tienda</th></tr></thead>
+              <tbody>
+                ${data.asignaciones.map(a => `
+                  <tr>
+                    <td>${a.fecha}</td>
+                    <td>${a.horaEntrada}</td>
+                    <td>${a.horaSalida}</td>
+                    <td>${a.tienda}</td>
+                  </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>`;
         document.getElementById("resultado").innerHTML = tabla;
 
       } catch (e) {
@@ -102,11 +116,9 @@
       }
     }
 
-    // Ver horarios de todos los usuarios, ordenados por entrada
     async function verTodos() {
       const nombres = await cargarNombres();
       const horariosPorDia = {};
-
       const resultadoDiv = document.getElementById("resultado");
       resultadoDiv.innerHTML = `<p>Cargando todos los horarios...</p>`;
 
@@ -135,12 +147,9 @@
         }
       }
 
-      // Armar el HTML de la tabla por día, ordenado por hora de entrada
-      let html = `<h2>Horarios por día</h2>`;
+      let html = `<div class="scaleX-in"><h2>Horarios por día</h2>`;
       for (const dia in horariosPorDia) {
-        // Ordenar por hora de entrada
         horariosPorDia[dia].sort((a, b) => a.entrada.localeCompare(b.entrada));
-
         html += `
           <h3>${dia}</h3>
           <table>
@@ -157,7 +166,7 @@
             </tbody>
           </table>`;
       }
-
+      html += `</div>`;
       resultadoDiv.innerHTML = html;
     }
   </script>
