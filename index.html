@@ -54,7 +54,7 @@
     const sheetUrl = "https://docs.google.com/spreadsheets/d/1nDrIAbG-VDmzHfIwiL_GA_nHoMx0w_G3HInpmMkV35A/export?format=csv&gid=0";
     const proxy = "https://api.allorigins.win/raw?url=";
 
-    // ✔️ Lee la hoja de cálculo y devuelve un objeto con legajo => nombre
+    // Cargar nombres desde la hoja de cálculo
     async function cargarNombres() {
       const res = await fetch(sheetUrl);
       const texto = await res.text();
@@ -67,7 +67,7 @@
       return nombres;
     }
 
-    // ✔️ Muestra solo tus horarios (como ya venía haciendo)
+    // Ver horarios de un solo usuario
     async function verMisHorarios() {
       const nombres = await cargarNombres();
       const legajo = prompt("Ingresá tu legajo:");
@@ -102,7 +102,7 @@
       }
     }
 
-    // ✔️ Carga todos los horarios por cada persona y los agrupa por día
+    // Ver horarios de todos los usuarios, ordenados por entrada
     async function verTodos() {
       const nombres = await cargarNombres();
       const horariosPorDia = {};
@@ -135,9 +135,12 @@
         }
       }
 
-      // ✔️ Armar el HTML de la tabla por día
+      // Armar el HTML de la tabla por día, ordenado por hora de entrada
       let html = `<h2>Horarios por día</h2>`;
       for (const dia in horariosPorDia) {
+        // Ordenar por hora de entrada
+        horariosPorDia[dia].sort((a, b) => a.entrada.localeCompare(b.entrada));
+
         html += `
           <h3>${dia}</h3>
           <table>
