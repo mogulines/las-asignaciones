@@ -251,4 +251,42 @@
 
     function mostrarTabla(asignaciones, titulo, mostrarContador) {
       let html = `<h2>${titulo}</h2><table aria-label="Tabla de asignaciones"><thead><tr>
-        <th>Fecha</th><th>Entrada
+        <th>Fecha</th><th>Entrada</th><th>Salida</th><th>Horas</th>${mostrarContador ? '' : '<th>Nombre</th>'}
+      </tr></thead><tbody>`;
+
+      let totalHoras = 0;
+
+      asignaciones.forEach(a => {
+        const horas = calcularHoras(a.horaEntrada, a.horaSalida);
+        totalHoras += horas;
+        html += `<tr>
+          <td>${a.fecha}</td>
+          <td>${a.horaEntrada}</td>
+          <td>${a.horaSalida}</td>
+          <td>${horas.toFixed(2)}</td>
+          ${mostrarContador ? '' : `<td>${a.nombre || ''}</td>`}
+        </tr>`;
+      });
+
+      html += `</tbody></table>`;
+
+      if (mostrarContador) {
+        html += `<p class="contador">Total horas trabajadas: ${totalHoras.toFixed(2)}</p>`;
+      }
+
+      tablaAsignaciones.innerHTML = html;
+    }
+
+    // Carga inicial
+    (async () => {
+      await cargarLegajosNombres();
+      // Si está en modo "todos" lo mostramos
+      if (modoSelect.value === "todos") {
+        formLegajo.style.display = "none";
+        mostrarTodos();
+      }
+    })();
+  </script>
+</body>
+</html>
+
