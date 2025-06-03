@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mis Asignaciones - Horarios</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f9f9f9;
+    }
+    h1 {
+      color: #2a5d84;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      max-width: 600px;
+      margin-top: 20px;
+      background: white;
+      box-shadow: 0 0 10px #ccc;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: center;
+    }
+    th {
+      background-color: #2a5d84;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <h1>Mis Asignaciones - Horarios</h1>
+  <table id="tablaHorarios">
+    <thead>
+      <tr>
+        <th>Fecha</th>
+        <th>Hora Entrada</th>
+        <th>Hora Salida</th>
+        <th>Tienda</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td colspan="4">Cargando...</td></tr>
+    </tbody>
+  </table>
+
+  <script>
+    const legajo = "131018";
+
+    // Proxy para evitar CORS (allorigins)
+    const proxy = "https://api.allorigins.win/raw?url=";
+
+    // URL original de la API
+    const apiUrl = `http://proveedores.alsea.com.ar:48080/asignaciones-server/mobile/main/asignaciones/legajos/${legajo}`;
+
+    // URL completa usando proxy
+    const url = `${proxy}${encodeURIComponent(apiUrl)}`;
+
+    async function cargarHorarios() {
+      try {
+        const respuesta = await fetch(url);
+        if (!respuesta.ok) {
+          throw new Error(`Error HTTP: ${respuesta.status}`);
+        }
+        const datos = await respuesta.json();
+
+        const tablaBody = document.querySelector("#tablaHorarios tbody");
+        tablaBody.innerHTML = "";
+
+        datos.asignaciones.forEach(asignacion => {
+          const fila = document.createElement("tr");
+          fila.innerHTML = `
+            <td>${asignacion.fecha}</td>
+            <td>${asignacion.horaEntrada}</td>
+            <td>${asignacion.horaSalida}</td>
+            <td>${asignacion.tienda}</td>
+          `;
+          tablaBody.appendChild(fila);
+        });
+
+      } catch (error) {
+        const tablaBody = document.querySelector("#tablaHorarios tbody");
+        tablaBody.innerHTML = `<tr><td colspan="4" style="color:red;">No se pudieron cargar los datos.<br>${error.message}</td></tr>`;
+      }
+    }
+
+    cargarHorarios();
+  </script>
+</body>
+</html>
