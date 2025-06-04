@@ -2,10 +2,9 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Asignaciones BK</title>
   <style>
-    /* tu CSS aquí igual */
     body {
       font-family: Arial, sans-serif;
       background-color: #b0acd4;
@@ -16,9 +15,11 @@
       padding: 2rem;
       text-align: center;
     }
+
     h1 {
       color: #46245c;
     }
+
     input, select, button {
       padding: 0.5rem;
       margin: 0.5rem;
@@ -26,14 +27,17 @@
       border-radius: 8px;
       font-size: 1rem;
     }
+
     button {
       background-color: #6755a2;
       color: white;
       cursor: pointer;
     }
+
     button:hover {
       background-color: #46245c;
     }
+
     .tabla {
       background: white;
       border-radius: 16px;
@@ -46,166 +50,133 @@
       transform: scale(0.9);
       animation: aparecer 0.6s forwards ease-out;
     }
+
+    .contenedor-dias {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 1rem;
+      width: 100%;
+      max-width: 1200px;
+      margin-top: 2rem;
+    }
+
+    .dia-cuadro {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+      padding: 1rem;
+      flex: 1 1 300px;
+      min-width: 280px;
+      max-width: 350px;
+      text-align: left;
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 1rem;
+      margin-top: 0.5rem;
     }
+
     th, td {
-      padding: 0.5rem;
+      padding: 0.4rem 0.6rem;
       border-bottom: 1px solid #ccc;
+      font-size: 0.9rem;
     }
+
+    th {
+      background-color: #f0f0f0;
+    }
+
     @keyframes aparecer {
       to {
         opacity: 1;
         transform: scale(1);
       }
     }
+
     .contador {
       font-weight: bold;
       margin-top: 1rem;
-    }
-    .error {
-      color: #b00020;
-      font-weight: bold;
-      margin-top: 1rem;
+      text-align: center;
     }
   </style>
 </head>
 <body>
   <h1>Asignaciones BK</h1>
 
-  <select id="modo" aria-label="Modo de visualización">
+  <select id="modo">
     <option value="mias">Ver mis horarios</option>
     <option value="todos">Ver horarios de todos</option>
   </select>
 
   <div id="form-legajo">
-    <input type="text" id="legajo" placeholder="Ingresá tu legajo" aria-label="Legajo" />
-    <button type="button" onclick="buscarAsignaciones()">Ver mis horarios</button>
-    <div id="error-legajo" class="error" style="display:none;"></div>
+    <input type="text" id="legajo" placeholder="Ingresá tu legajo" />
+    <button id="btn-ver-mis-horarios" type="button">Ver mis horarios</button>
   </div>
 
-  <div id="tabla-asignaciones" class="tabla" style="display:none;" aria-live="polite"></div>
+  <div id="tabla-asignaciones" class="tabla" style="display:none;"></div>
 
   <script>
     const API_BASE_URL = "https://bitter-scene-e2f5.milibarraza18.workers.dev/api/";
 
-    // URL CSV de Google Sheets (revisá que esté publicada y pública)
-    const GOOGLE_SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTRbyYnTDk6oZnYZ1JZznd9oOSrw_2slT9CkYR4mVDKAorMln3NXIPcjEreGI_NvdpDmavIIIBXPdfq/pub?output=csv&gid=0";
+    let legajosNombres = [];
 
-    // Variables globales para legajos y nombres que cargaremos del CSV
-    let legajosNombres = []; // Array de objetos { legajo: "123", nombre: "Juan" }
-
-    const modoSelect = document.getElementById('modo');
-    const formLegajo = document.getElementById('form-legajo');
-    const errorLegajo = document.getElementById('error-legajo');
-    const tablaAsignaciones = document.getElementById('tabla-asignaciones');
-
-    // Escuchar cambio modo
-    modoSelect.addEventListener('change', () => {
-      errorLegajo.style.display = 'none';
-      tablaAsignaciones.style.display = 'none';
-
-      if (modoSelect.value === 'mias') {
-        formLegajo.style.display = 'block';
-      } else {
-        formLegajo.style.display = 'none';
-        mostrarTodos();
-      }
-    });
-
-    // Función para parsear CSV simple (asume primera fila encabezados legajo,nombre)
-    function parseCSV(text) {
-      const lines = text.trim().split("\n");
-      const result = [];
-      const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
-
-      for (let i = 1; i < lines.length; i++) {
-        const obj = {};
-        const currentline = lines[i].split(",");
-
-        headers.forEach((header, idx) => {
-          obj[header] = currentline[idx] ? currentline[idx].trim() : "";
-        });
-
-        result.push(obj);
-      }
-      return result;
-    }
-
-    // Cargar legajos y nombres desde Google Sheets CSV
     async function cargarLegajosNombres() {
       try {
-        const res = await fetch(GOOGLE_SHEETS_CSV_URL);
-        if (!res.ok) throw new Error("No se pudo cargar la planilla");
+        const res = await fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vTRbyYnTDk6oZnYZ1JZznd9oOSrw_2slT9CkYR4mVDKAorMln3NXIPcjEreGI_NvdpDmavIIIBXPdfq/pub?output=csv&gid=0");
         const csvText = await res.text();
-        legajosNombres = parseCSV(csvText).filter(row => row.legajo && row.nombre);
+        legajosNombres = csvText.trim().split("\n").slice(1).map(line => {
+          const [legajo, nombre] = line.split(",");
+          return { legajo: legajo.trim(), nombre: nombre.trim() };
+        });
+        console.log("Legajos y nombres cargados:", legajosNombres);
       } catch (e) {
-        console.error("Error cargando planilla:", e);
-        legajosNombres = []; // fallback vacío
+        console.error("Error cargando legajos y nombres:", e);
       }
+    }
+
+    function nombrePorLegajo(legajo) {
+      const encontrado = legajosNombres.find(l => l.legajo === legajo);
+      return encontrado ? encontrado.nombre : "Sin nombre";
     }
 
     async function buscarAsignaciones() {
-      errorLegajo.style.display = 'none';
-      tablaAsignaciones.style.display = 'none';
-
       const legajo = document.getElementById("legajo").value.trim();
       if (!legajo) {
-        errorLegajo.textContent = "Ingresá un legajo.";
-        errorLegajo.style.display = 'block';
+        alert("Ingresá un legajo.");
         return;
       }
 
-      tablaAsignaciones.innerHTML = "Cargando...";
-      tablaAsignaciones.style.display = 'block';
-
       try {
-        const res = await fetch(API_BASE_URL + `asignaciones/legajos/${legajo}`);
-        if (!res.ok) throw new Error("Error en la respuesta de la API");
+        const res = await fetch(`${API_BASE_URL}asignaciones/legajos/${legajo}`);
+        if (!res.ok) throw new Error("No se pudo obtener la respuesta");
         const data = await res.json();
+        if (!data.asignaciones) throw new Error("No hay asignaciones");
 
-        if (!data.asignaciones || data.asignaciones.length === 0) {
-          tablaAsignaciones.innerHTML = `<p>No se encontraron asignaciones para el legajo ${legajo}.</p>`;
-          return;
-        }
+        // Agregar nombre a cada asignacion para mostrar
+        data.asignaciones.forEach(a => a.nombre = nombrePorLegajo(legajo));
 
-        // Buscar nombre en legajosNombres
-        const nombre = (legajosNombres.find(e => e.legajo === legajo) || {}).nombre || "Sin nombre";
-
-        mostrarTabla(data.asignaciones, `Horarios para ${legajo} (${nombre})`, true);
+        mostrarTabla(data.asignaciones, `Horarios para ${legajo} (${nombrePorLegajo(legajo)})`, true);
       } catch (e) {
-        tablaAsignaciones.innerHTML = `<p class="error">No se pudieron cargar los datos. Intenta nuevamente.</p>`;
+        console.error(e);
+        alert("No se pudieron cargar los datos para ese legajo.");
       }
     }
 
     async function mostrarTodos() {
-      tablaAsignaciones.innerHTML = "Cargando...";
-      tablaAsignaciones.style.display = 'block';
-
-      if (legajosNombres.length === 0) {
-        // Si no cargamos aún, cargamos legajos y nombres
-        await cargarLegajosNombres();
-      }
-
-      if (legajosNombres.length === 0) {
-        tablaAsignaciones.innerHTML = "<p class='error'>No se pudo cargar la lista de legajos.</p>";
-        return;
-      }
+      const contenedor = document.getElementById("tabla-asignaciones");
+      contenedor.innerHTML = "Cargando...";
+      contenedor.style.display = "block";
 
       const todas = [];
 
-      for (const item of legajosNombres) {
-        const legajo = item.legajo;
-        const nombre = item.nombre;
-
+      for (const { legajo, nombre } of legajosNombres) {
         try {
-          const res = await fetch(API_BASE_URL + `asignaciones/legajos/${legajo}`);
+          const res = await fetch(`${API_BASE_URL}asignaciones/legajos/${legajo}`);
           if (!res.ok) continue;
           const data = await res.json();
-
-          if (data.asignaciones && data.asignaciones.length > 0) {
+          if (data.asignaciones) {
             data.asignaciones.forEach(asig => {
               todas.push({
                 ...asig,
@@ -214,79 +185,107 @@
             });
           }
         } catch {
-          // omitimos errores individuales
+          // omitimos errores
         }
       }
 
-      if (todas.length === 0) {
-        tablaAsignaciones.innerHTML = "<p>No se encontraron asignaciones para mostrar.</p>";
-        return;
-      }
-
-      // Ordenar por fecha y hora de entrada
+      // Ordenar por fecha y horaEntrada
       todas.sort((a, b) => {
-        const fechaHoraA = a.fecha + " " + a.horaEntrada;
-        const fechaHoraB = b.fecha + " " + b.horaEntrada;
-        return fechaHoraA.localeCompare(fechaHoraB);
+        if (a.fecha === b.fecha) {
+          return a.horaEntrada.localeCompare(b.horaEntrada);
+        }
+        return a.fecha.localeCompare(b.fecha);
       });
 
-      mostrarTabla(todas, "Horarios de todos", false);
+      mostrarTablaPorDias(todas);
     }
 
-    function calcularHoras(entrada, salida) {
-      const [h1, m1] = entrada.split(":").map(Number);
-      const [h2, m2] = salida.split(":").map(Number);
+    function mostrarTablaPorDias(asignaciones) {
+      const contenedor = document.getElementById("tabla-asignaciones");
 
-      if (isNaN(h1) || isNaN(m1) || isNaN(h2) || isNaN(m2)) return 0;
+      // Agrupar asignaciones por fecha
+      const agrupadoPorFecha = asignaciones.reduce((acc, a) => {
+        if (!acc[a.fecha]) acc[a.fecha] = [];
+        acc[a.fecha].push(a);
+        return acc;
+      }, {});
 
-      let minutosEntrada = h1 * 60 + m1;
-      let minutosSalida = h2 * 60 + m2;
+      // Construir html con cuadros por día
+      let html = `<h2>Horarios de todos</h2><div class="contenedor-dias">`;
 
-      if (minutosSalida < minutosEntrada) {
-        minutosSalida += 24 * 60;
+      for (const fecha of Object.keys(agrupadoPorFecha).sort()) {
+        const asigns = agrupadoPorFecha[fecha];
+
+        let totalHorasDia = 0;
+        asigns.forEach(a => {
+          const [h1, m1] = a.horaEntrada.split(":").map(Number);
+          const [h2, m2] = a.horaSalida.split(":").map(Number);
+          totalHorasDia += (h2 + m2/60) - (h1 + m1/60);
+        });
+
+        html += `<div class="dia-cuadro">`;
+        html += `<h3>${fecha}</h3>`;
+        html += `<table><thead><tr><th>Entrada</th><th>Salida</th><th>Tienda</th><th>Nombre</th></tr></thead><tbody>`;
+
+        asigns.forEach(a => {
+          html += `<tr><td>${a.horaEntrada}</td><td>${a.horaSalida}</td><td>${a.tienda}</td><td>${a.nombre}</td></tr>`;
+        });
+
+        html += `</tbody></table>`;
+        html += `<div class="contador">Total horas día: ${totalHorasDia.toFixed(1)} hs</div>`;
+        html += `</div>`;
       }
 
-      return (minutosSalida - minutosEntrada) / 60;
+      html += `</div>`;
+
+      contenedor.innerHTML = html;
     }
 
     function mostrarTabla(asignaciones, titulo, mostrarContador) {
-      let html = `<h2>${titulo}</h2><table aria-label="Tabla de asignaciones"><thead><tr>
-        <th>Fecha</th><th>Entrada</th><th>Salida</th><th>Horas</th>${mostrarContador ? '' : '<th>Nombre</th>'}
-      </tr></thead><tbody>`;
+      const contenedor = document.getElementById("tabla-asignaciones");
+      let html = `<h2>${titulo}</h2><table><tr><th>Fecha</th><th>Entrada</th><th>Salida</th><th>Tienda</th>`;
+
+      if (!mostrarContador) html += "<th>Nombre</th>";
+      html += "</tr>";
 
       let totalHoras = 0;
 
       asignaciones.forEach(a => {
-        const horas = calcularHoras(a.horaEntrada, a.horaSalida);
-        totalHoras += horas;
-        html += `<tr>
-          <td>${a.fecha}</td>
-          <td>${a.horaEntrada}</td>
-          <td>${a.horaSalida}</td>
-          <td>${horas.toFixed(2)}</td>
-          ${mostrarContador ? '' : `<td>${a.nombre || ''}</td>`}
-        </tr>`;
+        html += `<tr><td>${a.fecha}</td><td>${a.horaEntrada}</td><td>${a.horaSalida}</td><td>${a.tienda}</td>`;
+        if (!mostrarContador) html += `<td>${a.nombre}</td>`;
+        html += "</tr>";
+
+        const [h1, m1] = a.horaEntrada.split(":").map(Number);
+        const [h2, m2] = a.horaSalida.split(":").map(Number);
+        totalHoras += (h2 + m2/60) - (h1 + m1/60);
       });
 
-      html += `</tbody></table>`;
+      html += "</table>";
 
       if (mostrarContador) {
-        html += `<p class="contador">Total horas trabajadas: ${totalHoras.toFixed(2)}</p>`;
+        html += `<div class="contador">Total de horas asignadas: ${totalHoras.toFixed(1)} hs</div>`;
       }
 
-      tablaAsignaciones.innerHTML = html;
+      contenedor.innerHTML = html;
+      contenedor.style.display = 'block';
     }
 
-    // Carga inicial
-    (async () => {
+    document.addEventListener("DOMContentLoaded", async () => {
       await cargarLegajosNombres();
-      // Si está en modo "todos" lo mostramos
-      if (modoSelect.value === "todos") {
-        formLegajo.style.display = "none";
-        mostrarTodos();
-      }
-    })();
+
+      document.getElementById("btn-ver-mis-horarios").addEventListener("click", buscarAsignaciones);
+
+      document.getElementById('modo').addEventListener('change', (e) => {
+        const modo = e.target.value;
+        if (modo === 'mias') {
+          document.getElementById('form-legajo').style.display = 'block';
+          document.getElementById('tabla-asignaciones').style.display = 'none';
+        } else {
+          document.getElementById('form-legajo').style.display = 'none';
+          mostrarTodos();
+        }
+      });
+    });
   </script>
 </body>
 </html>
-
