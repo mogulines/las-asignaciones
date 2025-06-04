@@ -1,6 +1,11 @@
 const API_BASE_URL = "https://bitter-scene-e2f5.milibarraza18.workers.dev/api/";
 let legajosNombres = [];
 
+function parseFecha(fecha) {
+  const [dia, mes] = fecha.split("/").map(Number);
+  return new Date(`2025-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}`);
+}
+
 async function cargarLegajosNombres() {
   try {
     const res = await fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vTRbyYnTDk6oZnYZ1JZznd9oOSrw_2slT9CkYR4mVDKAorMln3NXIPcjEreGI_NvdpDmavIIIBXPdfq/pub?output=csv&gid=0");
@@ -54,16 +59,18 @@ async function mostrarTodos() {
       if (!res.ok) continue;
       const data = await res.json();
       if (data.asignaciones) {
-        data.asignaciones.forEach(asig => todas.push({ ...asig, nombre }));
+        data.asignaciones.forEach(asig => {
+          todas.push({ ...asig, nombre });
+        });
       }
-    } catch {}
+    } catch {
+      // omitimos errores
+    }
   }
 
   todas.sort((a, b) => {
-    const [d1, m1] = a.fecha.split("/").map(Number);
-    const [d2, m2] = b.fecha.split("/").map(Number);
-    const dateA = new Date(2025, m1 - 1, d1);
-    const dateB = new Date(2025, m2 - 1, d2);
+    const dateA = parseFecha(a.fecha);
+    const dateB = parseFecha(b.fecha);
     if (dateA.getTime() === dateB.getTime()) {
       return a.horaEntrada.localeCompare(b.horaEntrada);
     }
@@ -71,6 +78,48 @@ async function mostrarTodos() {
   });
 
   mostrarTablaPorDias(todas);
+}
+
+function mostrarTablaPorDias(asignaciones) {
+  const contenedor = document.getElementById("tabla-asignaciones");
+
+  const agrupado = asignaciones.reduce((acc, a) => {
+    if (!acc[a.fecha]) acc[a.fecha] = [];
+    acc[a.fecha].push(a);
+    return acc;
+  }, {});
+
+  const fechasOrdenadas = Object.keys(agrupado).sort((f1, f2) => {
+    return parseFecha(f1) - parseFecha(f2);
+  });
+
+  let html = `<h2>Horarios de todos</h2><div class="contenedor-dias">`;
+
+  for (const fecha of fechasOrdenadas) {
+    const asigns = agrupado[fecha];
+
+    let totalHorasDia = 0;
+    asigns.forEach(a => {
+      const [h1, m1] = a.horaEntrada.split(":").map(Number);
+      const [h2, m2] = a.horaSalida.split(":").map(Number);
+      totalHorasDia += (h2 + m2 / 60) - (h1 + m1 / 60);
+    });
+
+    html += `<div class="dia-cuadro">`;
+    html += `<h3>${fecha}</h3>`;
+    html += `<table><thead><tr><th>Entrada</th><th>Salida</th><th>Tienda</th><th>Nombre</th></tr></thead><tbody>`;
+
+    asigns.forEach(a => {
+      html += `<tr><td>${a.horaEntrada}</td><td>${a.horaSalida}</td><td>${a.tienda}</td><td>${a.nombre}</td></tr>`;
+    });
+
+    html += `</tbody></table>`;
+    html += `<div class="contador">Total horas día: ${totalHorasDia.toFixed(1)} hs</div>`;
+    html += `</div>`;
+  }
+
+  html += `</div>`;
+  contenedor.innerHTML = html;
 }
 
 function mostrarTabla(asignaciones, titulo, mostrarContador) {
@@ -92,50 +141,13 @@ function mostrarTabla(asignaciones, titulo, mostrarContador) {
   });
 
   html += "</table>";
+
   if (mostrarContador) {
     html += `<div class="contador">Total de horas asignadas: ${totalHoras.toFixed(1)} hs</div>`;
   }
 
   contenedor.innerHTML = html;
   contenedor.style.display = 'block';
-}
-
-function mostrarTablaPorDias(asignaciones) {
-  const contenedor = document.getElementById("tabla-asignaciones");
-
-  const agrupado = asignaciones.reduce((acc, a) => {
-    if (!acc[a.fecha]) acc[a.fecha] = [];
-    acc[a.fecha].push(a);
-    return acc;
-  }, {});
-
-  const fechasOrdenadas = Object.keys(agrupado).sort((f1, f2) => {
-    const [d1, m1] = f1.split("/").map(Number);
-    const [d2, m2] = f2.split("/").map(Number);
-    return new Date(2025, m1 - 1, d1) - new Date(2025, m2 - 1, d2);
-  });
-
-  let html = `<h2>Horarios de todos</h2><div class="contenedor-dias">`;
-
-  for (const fecha of fechasOrdenadas) {
-    const asigns = agrupado[fecha];
-    let totalHorasDia = 0;
-
-    asigns.forEach(a => {
-      const [h1, m1] = a.horaEntrada.split(":").map(Number);
-      const [h2, m2] = a.horaSalida.split(":").map(Number);
-      totalHorasDia += (h2 + m2 / 60) - (h1 + m1 / 60);
-    });
-
-    html += `<div class="dia-cuadro"><h3>${fecha}</h3><table><thead><tr><th>Entrada</th><th>Salida</th><th>Tienda</th><th>Nombre</th></tr></thead><tbody>`;
-    asigns.forEach(a => {
-      html += `<tr><td>${a.horaEntrada}</td><td>${a.horaSalida}</td><td>${a.tienda}</td><td>${a.nombre}</td></tr>`;
-    });
-    html += `</tbody></table><div class="contador">Total horas día: ${totalHorasDia.toFixed(1)} hs</div></div>`;
-  }
-
-  html += `</div>`;
-  contenedor.innerHTML = html;
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
