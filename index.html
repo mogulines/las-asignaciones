@@ -43,7 +43,7 @@
       border-radius: 16px;
       box-shadow: 0 4px 8px rgba(0,0,0,0.2);
       margin-top: 2rem;
-      width: 90%;
+      width: 95%;
       max-width: 1400px;
       padding: 1rem;
       opacity: 0;
@@ -55,7 +55,7 @@
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
-      gap: 1rem;
+      gap: 1.5rem;
       width: 100%;
       max-width: 1400px;
       margin-top: 2rem;
@@ -65,10 +65,10 @@
       background: white;
       border-radius: 16px;
       box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-      padding: 1rem;
-      flex: 1 1 420px;
-      min-width: 380px;
-      max-width: 480px;
+      padding: 1.2rem;
+      flex: 1 1 350px;
+      min-width: 320px;
+      max-width: 400px;
       text-align: left;
     }
 
@@ -130,7 +130,6 @@
           const [legajo, nombre] = line.split(",");
           return { legajo: legajo.trim(), nombre: nombre.trim() };
         });
-        console.log("Legajos y nombres cargados:", legajosNombres);
       } catch (e) {
         console.error("Error cargando legajos y nombres:", e);
       }
@@ -187,6 +186,7 @@
         }
       }
 
+      // Ordenar por fecha real y horaEntrada
       todas.sort((a, b) => {
         const [d1, m1] = a.fecha.split("/").map(Number);
         const [d2, m2] = b.fecha.split("/").map(Number);
@@ -208,8 +208,6 @@
         return acc;
       }, {});
 
-      let html = `<h2>Horarios de todos</h2><div class="contenedor-dias">`;
-
       const fechasOrdenadas = Object.keys(agrupadoPorFecha).sort((a, b) => {
         const [d1, m1] = a.split("/").map(Number);
         const [d2, m2] = b.split("/").map(Number);
@@ -218,9 +216,12 @@
         return dateA - dateB;
       });
 
+      let html = `<h2>Horarios de todos</h2><div class="contenedor-dias">`;
+
       for (const fecha of fechasOrdenadas) {
         const asigns = agrupadoPorFecha[fecha];
         let totalHorasDia = 0;
+
         asigns.forEach(a => {
           const [h1, m1] = a.horaEntrada.split(":").map(Number);
           const [h2, m2] = a.horaSalida.split(":").map(Number);
@@ -263,7 +264,6 @@
       });
 
       html += "</table>";
-
       if (mostrarContador) {
         html += `<div class="contador">Total de horas asignadas: ${totalHoras.toFixed(1)} hs</div>`;
       }
@@ -274,7 +274,9 @@
 
     document.addEventListener("DOMContentLoaded", async () => {
       await cargarLegajosNombres();
+
       document.getElementById("btn-ver-mis-horarios").addEventListener("click", buscarAsignaciones);
+
       document.getElementById('modo').addEventListener('change', (e) => {
         const modo = e.target.value;
         if (modo === 'mias') {
@@ -289,3 +291,4 @@
   </script>
 </body>
 </html>
+<!--  -->
