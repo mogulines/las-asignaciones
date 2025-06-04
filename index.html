@@ -52,24 +52,30 @@
     }
 
     .contenedor-dias {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 1rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.5rem;
       width: 100%;
-      max-width: 1200px;
       margin-top: 2rem;
+      padding: 0 1rem;
     }
 
     .dia-cuadro {
       background: white;
       border-radius: 16px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-      padding: 1rem;
-      flex: 1 1 300px;
-      min-width: 280px;
-      max-width: 350px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      padding: 1.2rem;
       text-align: left;
+      transition: transform 0.2s ease;
+    }
+
+    .dia-cuadro:hover {
+      transform: scale(1.02);
+    }
+
+    .dia-cuadro h3 {
+      color: #46245c;
+      margin-bottom: 0.5rem;
     }
 
     table {
@@ -99,6 +105,10 @@
       font-weight: bold;
       margin-top: 1rem;
       text-align: center;
+      background-color: #f4f0fb;
+      padding: 0.4rem;
+      border-radius: 8px;
+      color: #46245c;
     }
   </style>
 </head>
@@ -119,7 +129,6 @@
 
   <script>
     const API_BASE_URL = "https://bitter-scene-e2f5.milibarraza18.workers.dev/api/";
-
     let legajosNombres = [];
 
     async function cargarLegajosNombres() {
@@ -154,9 +163,7 @@
         const data = await res.json();
         if (!data.asignaciones) throw new Error("No hay asignaciones");
 
-        // Agregar nombre a cada asignacion para mostrar
         data.asignaciones.forEach(a => a.nombre = nombrePorLegajo(legajo));
-
         mostrarTabla(data.asignaciones, `Horarios para ${legajo} (${nombrePorLegajo(legajo)})`, true);
       } catch (e) {
         console.error(e);
@@ -178,18 +185,12 @@
           const data = await res.json();
           if (data.asignaciones) {
             data.asignaciones.forEach(asig => {
-              todas.push({
-                ...asig,
-                nombre,
-              });
+              todas.push({ ...asig, nombre });
             });
           }
-        } catch {
-          // omitimos errores
-        }
+        } catch {}
       }
 
-      // Ordenar por fecha y horaEntrada
       todas.sort((a, b) => {
         if (a.fecha === b.fecha) {
           return a.horaEntrada.localeCompare(b.horaEntrada);
@@ -202,15 +203,12 @@
 
     function mostrarTablaPorDias(asignaciones) {
       const contenedor = document.getElementById("tabla-asignaciones");
-
-      // Agrupar asignaciones por fecha
       const agrupadoPorFecha = asignaciones.reduce((acc, a) => {
         if (!acc[a.fecha]) acc[a.fecha] = [];
         acc[a.fecha].push(a);
         return acc;
       }, {});
 
-      // Construir html con cuadros por día
       let html = `<h2>Horarios de todos</h2><div class="contenedor-dias">`;
 
       for (const fecha of Object.keys(agrupadoPorFecha).sort()) {
@@ -237,19 +235,16 @@
       }
 
       html += `</div>`;
-
       contenedor.innerHTML = html;
     }
 
     function mostrarTabla(asignaciones, titulo, mostrarContador) {
       const contenedor = document.getElementById("tabla-asignaciones");
       let html = `<h2>${titulo}</h2><table><tr><th>Fecha</th><th>Entrada</th><th>Salida</th><th>Tienda</th>`;
-
       if (!mostrarContador) html += "<th>Nombre</th>";
       html += "</tr>";
 
       let totalHoras = 0;
-
       asignaciones.forEach(a => {
         html += `<tr><td>${a.fecha}</td><td>${a.horaEntrada}</td><td>${a.horaSalida}</td><td>${a.tienda}</td>`;
         if (!mostrarContador) html += `<td>${a.nombre}</td>`;
@@ -261,7 +256,6 @@
       });
 
       html += "</table>";
-
       if (mostrarContador) {
         html += `<div class="contador">Total de horas asignadas: ${totalHoras.toFixed(1)} hs</div>`;
       }
